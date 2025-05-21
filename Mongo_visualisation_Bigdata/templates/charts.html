@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentiment Analysis Dashboard</title>
+  
+  <!-- CSS Libraries -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .dashboard-header {
+      background-color: #343a40;
+      color: white;
+      padding: 15px 0;
+      margin-bottom: 20px;
+    }
+    
+    .card {
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      transition: transform 0.3s;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .card-header {
+      border-bottom: none;
+      background-color: white;
+      padding: 15px 20px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 300px;
+      padding: 10px;
+    }
+    
+    .stat-card {
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 0;
+    }
+    
+    .stat-label {
+      color: #6c757d;
+      font-size: 0.9rem;
+    }
+    
+    .sentiment-positive {
+      color: #28a745;
+    }
+    
+    .sentiment-negative {
+      color: #dc3545;
+    }
+    
+    .sentiment-neutral {
+      color: #ffc107;
+    }
+    
+    .filter-container {
+      background-color: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .review-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .review-item {
+      padding: 10px 15px;
+      border-left: 4px solid #6c757d;
+      margin-bottom: 10px;
+      background-color: white;
+      border-radius: 0 5px 5px 0;
+    }
+    
+    .review-item.positive {
+      border-left-color: #28a745;
+    }
+    
+    .review-item.negative {
+      border-left-color: #dc3545;
+    }
+    
+    .review-item.neutral {
+      border-left-color: #ffc107;
+    }
+    
+    .review-meta {
+      font-size: 0.8rem;
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h1><i class="fas fa-chart-line me-2"></i>Sentiment Analysis Dashboard</h1>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <p id="lastUpdated">Last updated: <span>--</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Filters -->
+    <div class="filter-container">
+      <div class="row">
+        <div class="col-md-3">
+          <label for="timeFilter" class="form-label">Time Range:</label>
+          <select id="timeFilter" class="form-select">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last year</option>
+            <option value="">All time</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="sentimentFilter" class="form-label">Sentiment:</label>
+          <select id="sentimentFilter" class="form-select">
+            <option value="" selected>All</option>
+            <option value="positive">Positive</option>
+            <option value="negative">Negative</option>
+            <option value="neutral">Neutral</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="intervalFilter" class="form-label">Time Interval:</label>
+          <select id="intervalFilter" class="form-select">
+            <option value="day" selected>Daily</option>
+            <option value="week">Weekly</option>
+            <option value="month">Monthly</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <button id="refreshBtn" class="btn btn-primary w-100">
+            <i class="fas fa-sync-alt me-2"></i>Refresh Data
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row" id="statsRow">
+      <!-- Stats will be inserted here via JS -->
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <span>Sentiment Distribution</span>
+            <span class="badge bg-secondary" id="sentimentTotal">Total: --</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="sentimentChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <span>Sentiment Trend Over Time</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="sentimentTrendChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <span>Top Keywords</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="keywordChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <span>Sentiment by Source</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="sourceChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Reviews -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <span>Recent Reviews</span>
+            <div>
+              <select id="reviewSentimentFilter" class="form-select form-select-sm d-inline-block w-auto">
+                <option value="">All Sentiments</option>
+                <option value="positive">Positive Only</option>
+                <option value="negative">Negative Only</option>
+                <option value="neutral">Neutral Only</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="review-list" id="reviewList">
+              <!-- Reviews will be inserted here via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-light py-3 mt-4">
+    <div class="container text-center">
+      <p class="text-muted mb-0">Sentiment Analysis Dashboard &copy; 2025</p>
+    </div>
+  </footer>
+
+  <!-- JS Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  
+  <!-- Custom JS -->
+  <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+</body>
+</html>

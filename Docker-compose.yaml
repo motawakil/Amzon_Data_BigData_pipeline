@@ -1,0 +1,133 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:3.8
+    container_name: zookeeper
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - bigdata-net
+
+  kafka:
+    image: bitnami/kafka:3.4
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+    healthcheck:
+      test: ["CMD", "kafka-topics.sh", "--list", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 20s
+      retries: 10
+    depends_on:
+      - zookeeper
+    networks:
+      - bigdata-net
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"      
+    networks:
+      - bigdata-net
+    volumes:
+      - ./data/mongo:/data/db
+
+
+  spark-master:
+    image: bitnami/spark:3.5
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - bigdata-net
+
+  spark-worker:
+      image: bitnami/spark:3.5
+      container_name: spark-worker
+      environment:
+        - SPARK_MODE=worker
+        - SPARK_MASTER_URL=spark://spark-master:7077
+      depends_on:
+        - spark-master
+      networks:
+        - bigdata-net
+
+  json-producer:
+    build:
+      context: ./jobs/json-producer
+    container_name: json-producer
+    volumes:
+      - ./data:/data
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - TOPIC_NAME=topic_raw
+    depends_on:
+      - kafka
+    networks:
+      - bigdata-net
+
+  # Spark Processor
+  spark-processor:
+    build:
+      context: ./jobs/spark-processor
+    container_name: spark-processor
+    environment:
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - kafka
+      - spark-master
+    networks:
+      - bigdata-net
+
+  spark-inference:
+    build:
+      context: ./jobs/spark-inference
+    container_name: spark-inference
+    volumes:
+      - ./jobs/spark-inference/model:/app/model  # FIXED path for accurate mapping
+    environment:
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - kafka
+      - spark-master
+    networks:
+      - bigdata-net
+
+
+  mongo-writer:
+    build:
+      context: ./jobs/mongo-writer
+    container_name: mongo-writer
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - MONGO_URI=mongodb://mongodb:27017
+      - DB_NAME=sentiment_analysis
+      - COLLECTION_NAME=predictions
+    depends_on:
+      - mongodb
+      - kafka
+    networks:
+      - bigdata-net
+
+
+networks:
+  bigdata-net:
+    driver: bridge
+
+
