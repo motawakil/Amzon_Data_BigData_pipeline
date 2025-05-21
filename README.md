@@ -41,7 +41,7 @@ docker-compose up -d --build
 
 ### 📌 Step 3: Build and Launch the Pipeline
 
-# Once containers are running:
+####  Once containers are running:
 docker exec -it kafka bash
 
 # Inside the Kafka container, run:
@@ -56,15 +56,15 @@ kafka-topics.sh --create --topic topic_results_training --bootstrap-server kafka
 
 ### 📌 Step 4: Monitor Kafka Topics (Optional)
 
-# Terminal 1
+#### Terminal 1
 docker exec -it kafka /opt/bitnami/kafka/bin/kafka-console-consumer.sh \
 --bootstrap-server localhost:9092 --topic topic_raw --from-beginning
 
-# Terminal 2
+#### Terminal 2
 docker exec -it kafka /opt/bitnami/kafka/bin/kafka-console-consumer.sh \
 --bootstrap-server localhost:9092 --topic topic_processing --from-beginning
 
-# Terminal 3
+#### Terminal 3
 docker exec -it kafka /opt/bitnami/kafka/bin/kafka-console-consumer.sh \
 --bootstrap-server localhost:9092 --topic topic_results_training --from-beginning
 
@@ -72,14 +72,14 @@ docker exec -it kafka /opt/bitnami/kafka/bin/kafka-console-consumer.sh \
 ### 📌 Step 5: Launch the Flask Dashboard
 cd Mongo_visualisation_Bigdata
 
-# Create and activate a virtual environment
+#### Create and activate a virtual environment
 python -m venv venv
 venv\Scripts\activate  # On Windows
 
-# Install dependencies
+#### Install dependencies
 pip install flask pymongo
 
-# Run the app
+#### Run the app
 flask run
 
 
